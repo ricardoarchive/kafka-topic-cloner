@@ -3,7 +3,7 @@ Go Cobra CLI that clones events between two topics of a unique kafka cluster
 
 ## Clone
 
-###Arguments
+### Arguments
 
 Argument    | Shorthand | Description
 ----------- | --------- | -----------
