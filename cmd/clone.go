@@ -95,6 +95,9 @@ func Clone(cmd *cobra.Command, args []string) {
 				if err != nil {
 					log.Printf("FAILED to send message %s\n", err)
 				}
+				if verbose {
+					log.Print("cloned message")
+				}
 			}
 		case <-signals:
 			return
