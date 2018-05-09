@@ -21,7 +21,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var url string
+var (
+	url     string
+	verbose bool
+)
 
 const appName = "kafka-topic-cloner"
 
@@ -47,4 +50,5 @@ func Execute() {
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&url, "brokers", "b", "http://localhost:9092", "semicolon-separated Kafka brokers URLs")
+	cloneCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose mode")
 }
