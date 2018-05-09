@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/Shopify/sarama"
+	"github.com/ricardo-ch/kafka-topic-cloner/kafka"
 
 	"github.com/bsm/sarama-cluster"
 
@@ -58,6 +59,7 @@ func Clone(cmd *cobra.Command, args []string) {
 
 	producerConfig := sarama.NewConfig()
 	producerConfig.Producer.Return.Successes = true
+	producerConfig.Producer.Partitioner = sarama.NewCustomHashPartitioner(kafka.MurmurHasher)
 
 	producer, err := sarama.NewSyncProducer(brokers, producerConfig)
 	if err != nil {
