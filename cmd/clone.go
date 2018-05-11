@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"time"
 
 	"github.com/Shopify/sarama"
 	"github.com/ricardo-ch/kafka-topic-cloner/kafka"
@@ -100,6 +101,9 @@ func Clone(cmd *cobra.Command, args []string) {
 				}
 			}
 		case <-signals:
+			return
+		case <-time.After(10 * time.Second):
+			log.Print("timeout - end of cloning")
 			return
 		}
 	}
