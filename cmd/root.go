@@ -23,15 +23,17 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	cluster "github.com/bsm/sarama-cluster"
 	"github.com/ricardo-ch/kafka-topic-cloner/kafka"
 	"github.com/spf13/cobra"
 )
 
 var (
-	url           string
 	verbose       bool
-	from, to      string
+	defaultHasher bool
+	url           string
+	from          string
+	to            string
+	timeout       int
 	consumerGroup = "kafka-topic-cloner"
 )
 
@@ -56,72 +58,61 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&url, "brokers", "b", "http://localhost:9092", "semicolon-separated Kafka brokers URLs")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose mode")
+	rootCmd.PersistentFlags().BoolVarP(&defaultHasher, "default-hasher", "d", false, "use the default sarama hasher for partitioning instead of murmur2")
+	rootCmd.PersistentFlags().StringVarP(&url, "brokers", "b", "http://localhost:9092", "semicolon-separated Kafka brokers URLs")
 	rootCmd.PersistentFlags().StringVarP(&from, "from", "f", "", "input topic")
 	rootCmd.PersistentFlags().StringVarP(&to, "to", "t", "", "output topic")
+	rootCmd.PersistentFlags().IntVarP(&timeout, "timeout", "o", 10000, "delay before timing out")
 }
 
 //Clone ...
 func Clone(cmd *cobra.Command, args []string) {
 
 	brokers := strings.Split(url, ";")
-
-	consumerConfig := cluster.NewConfig()
-	consumerConfig.Consumer.Return.Errors = true
-	consumerConfig.Consumer.Offsets.Initial = sarama.OffsetOldest
-	consumerConfig.Group.Return.Notifications = true
-
-	consumer, err := cluster.NewConsumer(brokers, consumerGroup, []string{from}, consumerConfig)
-	if err != nil {
-		panic(err)
+	consumer := kafka.NewConsumer(from, brokers, consumerGroup)
+	if verbose {
+		log.Printf("consumer %s initialized on %s/%s", consumerGroup, brokers, from)
+	}
+	producer := kafka.NewProducer(brokers, defaultHasher)
+	if verbose {
+		log.Printf("producer initialized on %s/%s", brokers, to)
 	}
 
-	producerConfig := sarama.NewConfig()
-	producerConfig.Producer.Return.Successes = true
-	producerConfig.Producer.Partitioner = sarama.NewCustomHashPartitioner(kafka.MurmurHasher)
-
-	producer, err := sarama.NewSyncProducer(brokers, producerConfig)
-	if err != nil {
-		panic(err)
-	}
 	defer func() {
 		if err := producer.Close(); err != nil {
 			panic(err)
 		}
 	}()
 
+	//Capture interrupt signal to stop the application
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt)
-
-	go func() {
-		for err := range consumer.Errors() {
-			log.Printf("Error: %s\n", err.Error())
-		}
-	}()
-
-	go func() {
-		for ntf := range consumer.Notifications() {
-			log.Printf("Rebalanced: %+v\n", ntf)
-		}
-	}()
 
 	for {
 		select {
 		case msgC, ok := <-consumer.Messages():
+			if verbose {
+				log.Print("message consumed")
+			}
 			if ok {
-				msgP := &sarama.ProducerMessage{Topic: to, Key: sarama.ByteEncoder(msgC.Key), Value: sarama.ByteEncoder(msgC.Value)}
+				msgP := &sarama.ProducerMessage{
+					Topic: to,
+					Key:   sarama.ByteEncoder(msgC.Key),
+					Value: sarama.ByteEncoder(msgC.Value),
+				}
 				_, _, err := producer.SendMessage(msgP)
 				if err != nil {
 					log.Printf("FAILED to send message %s\n", err)
 				}
 				if verbose {
-					log.Print("cloned message")
+					log.Print("message produced")
 				}
 			}
 		case <-signals:
+			log.Print("terminating application")
 			return
-		case <-time.After(10 * time.Second):
+		case <-time.After(time.Duration(timeout) * time.Millisecond):
 			log.Print("timeout - end of cloning")
 			return
 		}
