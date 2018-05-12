@@ -76,7 +76,7 @@ func Clone(cmd *cobra.Command, args []string) {
 	}
 	producer := kafka.NewProducer(brokers, defaultHasher)
 	if verbose {
-		log.Printf("producer initialized on %s/%s", brokers, to)
+		log.Printf("producer initialized on %s/%s, default hasher: %t", brokers, to, defaultHasher)
 	}
 
 	defer func() {
