@@ -9,6 +9,7 @@ import (
 
 //NewConsumer returns a new cluster consumer
 func NewConsumer(from string, brokers []string, consumerGroup string) *cluster.Consumer {
+
 	cfg := cluster.NewConfig()
 	cfg.Consumer.Return.Errors = true
 	cfg.Consumer.Offsets.Initial = sarama.OffsetOldest
@@ -36,9 +37,12 @@ func NewConsumer(from string, brokers []string, consumerGroup string) *cluster.C
 
 //NewProducer returns a new producer
 func NewProducer(brokers []string, defaultHasher bool) sarama.AsyncProducer {
+
 	cfg := sarama.NewConfig()
 	cfg.Producer.Return.Successes = true
 	cfg.Net.MaxOpenRequests = 1
+	cfg.Producer.RequiredAcks = sarama.WaitForAll
+
 	if defaultHasher {
 		cfg.Producer.Partitioner = sarama.NewCustomHashPartitioner(MurmurHasher)
 	}

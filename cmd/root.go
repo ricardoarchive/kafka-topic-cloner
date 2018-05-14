@@ -89,6 +89,7 @@ func Clone(cmd *cobra.Command, args []string) {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt)
 
+Loop:
 	for {
 		select {
 		case msgC, ok := <-consumer.Messages():
@@ -108,10 +109,10 @@ func Clone(cmd *cobra.Command, args []string) {
 			}
 		case <-signals:
 			log.Print("terminating application")
-			return
+			break Loop
 		case <-time.After(time.Duration(timeout) * time.Millisecond):
 			log.Print("timeout - end of cloning")
-			return
+			break Loop
 		}
 	}
 }
