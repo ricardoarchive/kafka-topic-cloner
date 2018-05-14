@@ -35,17 +35,24 @@ func NewConsumer(from string, brokers []string, consumerGroup string) *cluster.C
 }
 
 //NewProducer returns a new producer
-func NewProducer(brokers []string, defaultHasher bool) sarama.SyncProducer {
+func NewProducer(brokers []string, defaultHasher bool) sarama.AsyncProducer {
 	cfg := sarama.NewConfig()
 	cfg.Producer.Return.Successes = true
+	cfg.Net.MaxOpenRequests = 1
 	if defaultHasher {
 		cfg.Producer.Partitioner = sarama.NewCustomHashPartitioner(MurmurHasher)
 	}
 
-	producer, err := sarama.NewSyncProducer(brokers, cfg)
+	producer, err := sarama.NewAsyncProducer(brokers, cfg)
 	if err != nil {
 		panic(err)
 	}
+
+	go func() {
+		for err := range producer.Errors() {
+			log.Printf("Failed to produce message: %+v\n", err)
+		}
+	}()
 
 	return producer
 }

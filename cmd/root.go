@@ -101,10 +101,7 @@ func Clone(cmd *cobra.Command, args []string) {
 					Key:   sarama.ByteEncoder(msgC.Key),
 					Value: sarama.ByteEncoder(msgC.Value),
 				}
-				_, _, err := producer.SendMessage(msgP)
-				if err != nil {
-					log.Printf("FAILED to send message %s\n", err)
-				}
+				producer.Input() <- msgP
 				if verbose {
 					log.Print("message produced")
 				}
