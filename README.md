@@ -32,7 +32,10 @@ go get -u github.com/ricardo-ch/kafka-topic-cloner
 ```
 
 You then need to download the dependencies of the project. We are using [dep](https://github.com/golang/dep) as our dependency manager, so you will need to install it (instructions available on their own github repository).
-Once installed, a simple `dep ensure` will retrieve the source files of the dependencies.
+Once `dep` is installed, retrieve the source files of the dependencies:
+```sh
+dep ensure --update
+```
 
 You can then build an executable for your own using `go build`. If you want to build for another platform, you will need to set the `GOOS` and `GOARCH` environment variables to match the target system specifications.
 
