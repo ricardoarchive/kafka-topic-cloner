@@ -66,35 +66,41 @@ func init() {
 	rootCmd.PersistentFlags().IntVarP(&timeout, "timeout", "o", 10000, "delay before timing out")
 }
 
-//Clone ...
+//Clone handles the consuming / producing process
 func Clone(cmd *cobra.Command, args []string) {
 
 	brokers := strings.Split(url, ";")
 	consumer := kafka.NewConsumer(from, brokers, consumerGroup)
 	if verbose {
-		log.Printf("consumer %s initialized on %s/%s", consumerGroup, brokers, from)
+		log.Printf("consumer (group: %s) initialized on %s/%s", consumerGroup, brokers, from)
 	}
 	producer := kafka.NewProducer(brokers, defaultHasher)
 	if verbose {
 		log.Printf("producer initialized on %s/%s, default hasher: %t", brokers, to, defaultHasher)
 	}
 
+	//Try to gracefully shutdown
 	defer func() {
 		if err := producer.Close(); err != nil {
-			panic(err)
+			log.Fatal(err)
+		}
+		if err := consumer.Close(); err != nil {
+			log.Fatal(err)
 		}
 	}()
 
-	//Capture interrupt signal to stop the application
+	//Capture interrupt and kill signal to stop the application
 	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, os.Interrupt)
+	signal.Notify(signals, os.Interrupt, os.Kill)
 
+	//Cloning loop
 Loop:
 	for {
 		select {
+
 		case msgC, ok := <-consumer.Messages():
 			if verbose {
-				log.Print("message consumed")
+				log.Print(fmt.Sprintf("message consumed at partition %v, offset %v", msgC.Partition, msgC.Offset))
 			}
 			if ok {
 				msgP := &sarama.ProducerMessage{
@@ -107,9 +113,11 @@ Loop:
 					log.Print("message produced")
 				}
 			}
+
 		case <-signals:
 			log.Print("terminating application")
 			break Loop
+
 		case <-time.After(time.Duration(timeout) * time.Millisecond):
 			log.Print("timeout - end of cloning")
 			break Loop
