@@ -43,12 +43,10 @@ const appName = "kafka-topic-cloner"
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "kafka-topic-cloner",
-	Short: "small cli used to clone the content of a topic into another one",
-	Long: `consumes all the events stored in the input topic,
-	and produces them in the output topic.
-	The two topics have to co-exist inside the same cluster.`,
-	Run: Clone,
+	Use:   "kafka-topic-cloner --brokers [url] --from [source] --to [target]",
+	Short: "Small cli used to clone the content of a topic into another one",
+	Long:  `Consumes all the events stored in the source topic, and produces them in the target topic. The two topics have to co-exist inside the same cluster.`,
+	Run:   Clone,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
