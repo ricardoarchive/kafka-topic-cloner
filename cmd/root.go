@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -30,7 +31,8 @@ import (
 var (
 	verbose       bool
 	defaultHasher bool
-	url           string
+	force         bool
+	brokers       string
 	from          string
 	to            string
 	timeout       int
@@ -60,23 +62,33 @@ func Execute() {
 func init() {
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose mode")
 	rootCmd.PersistentFlags().BoolVarP(&defaultHasher, "default-hasher", "d", false, "use the default sarama hasher for partitioning instead of murmur2")
-	rootCmd.PersistentFlags().StringVarP(&url, "brokers", "b", "http://localhost:9092", "semicolon-separated Kafka brokers URLs")
-	rootCmd.PersistentFlags().StringVarP(&from, "from", "f", "", "input topic")
-	rootCmd.PersistentFlags().StringVarP(&to, "to", "t", "", "output topic")
+	rootCmd.PersistentFlags().BoolVarP(&defaultHasher, "force", "F", false, "force cloning into the source topic")
+	rootCmd.PersistentFlags().StringVarP(&brokers, "brokers", "b", "", "semicolon-separated Kafka brokers URLs")
+	rootCmd.PersistentFlags().StringVarP(&from, "from", "f", "", "source topic")
+	rootCmd.PersistentFlags().StringVarP(&to, "to", "t", "", "target topic")
 	rootCmd.PersistentFlags().IntVarP(&timeout, "timeout", "o", 10000, "delay before timing out")
+
+	rootCmd.MarkFlagRequired("brokers")
+	rootCmd.MarkFlagRequired("from")
+	rootCmd.MarkFlagRequired("to")
 }
 
 //Clone handles the consuming / producing process
 func Clone(cmd *cobra.Command, args []string) {
 
-	brokers := strings.Split(url, ";")
-	consumer := kafka.NewConsumer(from, brokers, consumerGroup)
-	if verbose {
-		log.Printf("consumer (group: %s) initialized on %s/%s", consumerGroup, brokers, from)
+	if err := validateParameters(); err != nil {
+		log.Print(err)
+		return
 	}
-	producer := kafka.NewProducer(brokers, defaultHasher)
+
+	b := strings.Split(brokers, ";")
+	consumer := kafka.NewConsumer(from, b, consumerGroup)
 	if verbose {
-		log.Printf("producer initialized on %s/%s, default hasher: %t", brokers, to, defaultHasher)
+		log.Printf("consumer (group: %s) initialized on %s/%s", consumerGroup, b, from)
+	}
+	producer := kafka.NewProducer(b, defaultHasher)
+	if verbose {
+		log.Printf("producer initialized on %s/%s, default hasher: %t", b, to, defaultHasher)
 	}
 
 	//Try to gracefully shutdown
@@ -123,4 +135,19 @@ Loop:
 			break Loop
 		}
 	}
+}
+
+func validateParameters() error {
+	switch true {
+	case brokers == "":
+		return errors.New("brokers must be set")
+	case from == "":
+		return errors.New("source topic must be set")
+	case to == "":
+		return errors.New("target topic must be set")
+	case from == to && !force:
+		return errors.New("same-topic cloning is disabled, use --force to ignore")
+	}
+
+	return nil
 }
