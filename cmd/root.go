@@ -62,7 +62,7 @@ func Execute() {
 func init() {
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose mode")
 	rootCmd.PersistentFlags().BoolVarP(&defaultHasher, "default-hasher", "d", false, "use the default sarama hasher for partitioning instead of murmur2")
-	rootCmd.PersistentFlags().BoolVarP(&defaultHasher, "force", "F", false, "force cloning into the source topic")
+	rootCmd.PersistentFlags().BoolVarP(&force, "force", "F", false, "force cloning into the source topic")
 	rootCmd.PersistentFlags().StringVarP(&brokers, "brokers", "b", "", "semicolon-separated Kafka brokers URLs")
 	rootCmd.PersistentFlags().StringVarP(&from, "from", "f", "", "source topic")
 	rootCmd.PersistentFlags().StringVarP(&to, "to", "t", "", "target topic")
