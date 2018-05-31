@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -30,7 +31,8 @@ import (
 var (
 	verbose       bool
 	defaultHasher bool
-	url           string
+	force         bool
+	brokers       string
 	from          string
 	to            string
 	timeout       int
@@ -41,12 +43,10 @@ const appName = "kafka-topic-cloner"
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "kafka-topic-cloner",
-	Short: "small cli used to clone the content of a topic into another one",
-	Long: `consumes all the events stored in the input topic,
-	and produces them in the output topic.
-	The two topics have to co-exist inside the same cluster.`,
-	Run: Clone,
+	Use:   "kafka-topic-cloner --brokers [url] --from [source] --to [target]",
+	Short: "Small cli used to clone the content of a topic into another one",
+	Long:  `Consumes all the events stored in the source topic, and produces them in the target topic. The two topics have to co-exist inside the same cluster.`,
+	Run:   Clone,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -60,23 +60,33 @@ func Execute() {
 func init() {
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose mode")
 	rootCmd.PersistentFlags().BoolVarP(&defaultHasher, "default-hasher", "d", false, "use the default sarama hasher for partitioning instead of murmur2")
-	rootCmd.PersistentFlags().StringVarP(&url, "brokers", "b", "http://localhost:9092", "semicolon-separated Kafka brokers URLs")
-	rootCmd.PersistentFlags().StringVarP(&from, "from", "f", "", "input topic")
-	rootCmd.PersistentFlags().StringVarP(&to, "to", "t", "", "output topic")
+	rootCmd.PersistentFlags().BoolVarP(&force, "force", "F", false, "force cloning into the source topic")
+	rootCmd.PersistentFlags().StringVarP(&brokers, "brokers", "b", "", "semicolon-separated Kafka brokers URLs")
+	rootCmd.PersistentFlags().StringVarP(&from, "from", "f", "", "source topic")
+	rootCmd.PersistentFlags().StringVarP(&to, "to", "t", "", "target topic")
 	rootCmd.PersistentFlags().IntVarP(&timeout, "timeout", "o", 10000, "delay before timing out")
+
+	rootCmd.MarkPersistentFlagRequired("brokers")
+	rootCmd.MarkPersistentFlagRequired("from")
+	rootCmd.MarkPersistentFlagRequired("to")
 }
 
 //Clone handles the consuming / producing process
 func Clone(cmd *cobra.Command, args []string) {
 
-	brokers := strings.Split(url, ";")
-	consumer := kafka.NewConsumer(from, brokers, consumerGroup)
-	if verbose {
-		log.Printf("consumer (group: %s) initialized on %s/%s", consumerGroup, brokers, from)
+	if err := validateParameters(); err != nil {
+		log.Print(err)
+		return
 	}
-	producer := kafka.NewProducer(brokers, defaultHasher)
+
+	b := strings.Split(brokers, ";")
+	consumer := kafka.NewConsumer(from, b, consumerGroup)
 	if verbose {
-		log.Printf("producer initialized on %s/%s, default hasher: %t", brokers, to, defaultHasher)
+		log.Printf("consumer (group: %s) initialized on %s/%s", consumerGroup, b, from)
+	}
+	producer := kafka.NewProducer(b, defaultHasher)
+	if verbose {
+		log.Printf("producer initialized on %s/%s, default hasher: %t", b, to, defaultHasher)
 	}
 
 	//Try to gracefully shutdown
@@ -123,4 +133,19 @@ Loop:
 			break Loop
 		}
 	}
+}
+
+func validateParameters() error {
+	switch true {
+	case brokers == "":
+		return errors.New("brokers must be set")
+	case from == "":
+		return errors.New("source topic must be set")
+	case to == "":
+		return errors.New("target topic must be set")
+	case from == to && !force:
+		return errors.New("same-topic cloning is disabled, use --force to ignore")
+	}
+
+	return nil
 }
