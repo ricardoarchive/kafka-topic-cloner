@@ -68,9 +68,9 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&to, "to", "t", "", "target topic")
 	rootCmd.PersistentFlags().IntVarP(&timeout, "timeout", "o", 10000, "delay before timing out")
 
-	rootCmd.MarkFlagRequired("brokers")
-	rootCmd.MarkFlagRequired("from")
-	rootCmd.MarkFlagRequired("to")
+	rootCmd.MarkPersistentFlagRequired("brokers")
+	rootCmd.MarkPersistentFlagRequired("from")
+	rootCmd.MarkPersistentFlagRequired("to")
 }
 
 //Clone handles the consuming / producing process
