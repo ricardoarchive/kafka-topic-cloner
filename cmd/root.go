@@ -33,6 +33,7 @@ var (
 	defaultHasher bool
 	force         bool
 	brokers       string
+	remoteBrokers string
 	from          string
 	to            string
 	timeout       int
@@ -62,6 +63,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&defaultHasher, "default-hasher", "d", false, "use the default sarama hasher for partitioning instead of murmur2")
 	rootCmd.PersistentFlags().BoolVarP(&force, "force", "F", false, "force cloning into the source topic")
 	rootCmd.PersistentFlags().StringVarP(&brokers, "brokers", "b", "", "semicolon-separated Kafka brokers URLs")
+	rootCmd.PersistentFlags().StringVarP(&remoteBrokers, "remote-brokers", "r", "", "semicolon-separated destination Kafka brokers URLs")
 	rootCmd.PersistentFlags().StringVarP(&from, "from", "f", "", "source topic")
 	rootCmd.PersistentFlags().StringVarP(&to, "to", "t", "", "target topic")
 	rootCmd.PersistentFlags().IntVarP(&timeout, "timeout", "o", 10000, "delay before timing out")
@@ -80,9 +82,14 @@ func Clone(cmd *cobra.Command, args []string) {
 	}
 
 	b := strings.Split(brokers, ";")
+
 	consumer := kafka.NewConsumer(from, b, consumerGroup)
 	if verbose {
 		log.Printf("consumer (group: %s) initialized on %s/%s", consumerGroup, b, from)
+	}
+
+	if remoteBrokers != "" {
+		b = strings.Split(remoteBrokers, ";")
 	}
 	producer := kafka.NewProducer(b, defaultHasher)
 	if verbose {
@@ -145,6 +152,8 @@ func validateParameters() error {
 		return errors.New("target topic must be set")
 	case from == to && !force:
 		return errors.New("same-topic cloning is disabled, use --force to ignore")
+	case brokers == remoteBrokers:
+		return errors.New("source and target brokers are the same, don't use --remote-brokers")
 	}
 
 	return nil
