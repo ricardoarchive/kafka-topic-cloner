@@ -130,8 +130,12 @@ Loop:
 			if ok {
 				msgP := &sarama.ProducerMessage{
 					Topic: to,
-					Key:   sarama.ByteEncoder(msgC.Key),
-					Value: sarama.ByteEncoder(msgC.Value),
+				}
+				if msgC.Value != nil {
+					msgP.Value = sarama.ByteEncoder(msgC.Value)
+				}
+				if msgC.Key != nil {
+					msgP.Key = sarama.ByteEncoder(msgC.Key)
 				}
 				producer.Input() <- msgP
 				if verbose {
