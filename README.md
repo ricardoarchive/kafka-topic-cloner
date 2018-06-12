@@ -5,7 +5,7 @@ The two topics have to coexist inside the same Kafka cluster. If that's not the 
 
 The cloner supports two different hashers for partition assignment:
 * `Murmur2`, which is the standard hasher used in the Java kafka community, including kafka scripts and kafka connect (default)
-* `FNV-1a`, which is the standard hasher used in the Go kafka community (_e.g. Sarama producers_)
+* `FNV-1a`, which is the standard hasher used in a part of the Go kafka community (_e.g. Sarama producers_)
 
 The CLI was written in Go using [spf13/cobra](https://github.com/spf13/cobra).
 
@@ -39,44 +39,69 @@ dep ensure --update
 
 You can then build an executable for your own using `go build`. If you want to build for another platform, you will need to set the `GOOS` and `GOARCH` environment variables to match the target system specifications.
 
-## Usage
+## Examples
+
+### Standard use
 
 A standard use of the `Kafka topic cloner` would look like this:
 
 ```sh
-kafka-topic-cloner --brokers localhost:9092 --from foo --to bar
+kafka-topic-cloner --from-brokers localhost:9092 --from foo --to bar
 ```
 
-This is going to consume every message from the `foo` topic and produce them inside the `bar` topic.
+This is going to consume every event from the `foo` topic and produce them inside the `bar` topic.
 
-If you choose the same hasher that was used to populate the source topic, and that you have the same number of partitions in the source and target topics, the cloned topic will be an exact replica of the original one. If some messages were mistakenly placed on the wrong partition (e.g. by manually producing them), the cloning would place them back on the right one.
+If you choose the same hasher that was used to populate the source topic, and that you have the same number of partitions in the source and target topics, the cloned topic will be an exact replica of the original one. If some events were mistakenly placed on the wrong partition (_e.g. by manually producing them_), the cloning would place them back on the right one.
 
-By default, `Kafka topic cloner` will use `Murmur2` as hasher algorithm. It is the algorithm that is used by the kafka scripts, kafka connect, and the majority of the Java kafka libraries (including the Stream API). If you prefer to use `FNV-1a` instead, which is the hasher implemented in [Sarama](https://github.com/Shopify/sarama) (Golang's most popular kafka library), you can use the default-hasher parameter:
+By default, `Kafka topic cloner` will use `Murmur2` as partitioning hasher. It is the algorithm that is used by the kafka scripts, kafka connect, and the majority of the Java kafka libraries (including the Stream API). If you prefer to use `FNV-1a` instead, which is the hasher implemented in [Sarama](https://github.com/Shopify/sarama) (Golang's most popular kafka library), you can use the hasher parameter:
 
 ```sh
-kafka-topic-cloner --brokers localhost:9092 --from foo --to bar --default-hasher
+kafka-topic-cloner --brokers localhost:9092 --from foo --to bar --hasher FNV-1a
 ```
 
-If you would like to see another hasher implemented, feel free to open an issue about this.
+If you would like to see another hasher implemented, feel free to open an issue about this!
 
-Technically, a Kafka topic has no definite end, but it is nice to know when the application is done cloning every available message in the source topic. To do so, `Kafka topic cloner` comes with a built-in timeout that will close the application when it was unable to clone any message for a certain amount of time. The default timeout delay is 10 seconds. You can override this delay by using the `timeout` parameter:
+### Cross-cluster cloning
+
+You can clone a topic from a kafka cluster to a different one, by specifying the `--to-cluster` parameter:
+```sh
+kafka-topic-cloner --from-brokers localhost:9092 --to-brokers remote-cluster:9092 --from foo --to bar
+```
+
+### Timing out
+
+Technically, a Kafka topic has no definite end, but it is nice to know when the application is done cloning every available event in the source topic. To do so, `Kafka topic cloner` comes with a built-in timeout that will close the application when it was unable to clone any event for a certain amount of time. The default timeout delay is 10 seconds. You can override this delay by using the `timeout` parameter:
 
 ```sh
 kafka-topic-cloner --brokers localhost:9092 --from foo --to bar --timeout 5000
 ```
 
-As of today, there is no way to completely disable the timeout.
+As of today, there is no way to completely disable the timeout (to be implemented soon).
+
+### Loop-cloning
+
+Loop-cloning, or same-topic cloning, is the action of cloning a topic into itself. Since it creates a continuous flow of new events inside the source topic, the cloning will never end and quickly multiply the number of events.
+Since this can be quite a dangerous action if done unintentionally, this action it protected by the --loop parameter.
+When loop-cloning, you should not specify the target topic, and the source topic will be used as target:
+```sh
+kafka-topic-cloner --from-brokers localhost:9092 --from foo --loop
+```
+
+## Parameters
 
 You can find the complete list of parameters below:
 
 Argument        | Shorthand | Description
 -----------     | --------- | -----------
-brokers         | b         | Semicolon-separated list of kafka brokers `required`
-from            | f         | Source topic's name `required`
-to              | t         | Destination topic's name`required`
+from-brokers    | F         | Semicolon-separated list of the source kafka brokers
+from            | f         | Source topic's name
+to-brokers      | T         | Semicolon-separated list of the target kafka brokers, specify only for cross-clusters cloning
+to              | t         | Destination topic's name
 timeout         | o         | consumer timeout is ms (defaults to 10000)
-default-hasher  | d         | use Sarama's FNV-1a hasher (defaults to false)
+hasher          | H         | name of the hasher to use for partitioning, possible values: murmur2 (default), FNV-1a
+loop            | L         | allow loop-cloning
 verbose         | v         | verbose mode (defaults to false)
+help            | h         | displays the CLI's help
 
 ## Disclaimer
 
