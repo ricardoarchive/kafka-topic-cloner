@@ -44,7 +44,7 @@ func NewConsumer(from string, brokers []string, consumerGroup string) *cluster.C
 }
 
 //NewProducer configures and returns an async producer
-func NewProducer(brokers []string, defaultHasher bool) sarama.AsyncProducer {
+func NewProducer(brokers []string, hasher string) sarama.AsyncProducer {
 
 	cfg := sarama.NewConfig()
 	cfg.Version = sarama.V1_0_0_0
@@ -59,7 +59,7 @@ func NewProducer(brokers []string, defaultHasher bool) sarama.AsyncProducer {
 	// Without this, cloning a high-volume topic will fail
 	cfg.Producer.Flush.Frequency = 100 * time.Millisecond
 
-	if !defaultHasher {
+	if hasher == "murmur2" {
 		cfg.Producer.Partitioner = sarama.NewCustomHashPartitioner(MurmurHasher)
 	}
 
