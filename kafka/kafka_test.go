@@ -4,6 +4,7 @@ package kafka
 
 import (
 	"testing"
+	"time"
 
 	"github.com/Shopify/sarama"
 	"github.com/magiconair/properties/assert"
@@ -31,10 +32,18 @@ func TestBuildConsumerConfig(t *testing.T) {
 	assert.Equal(t, cfg.Consumer.Fetch.Min, int32(1024*10))
 }
 
-func TestBuildProducerConfig_WithMurmurHasher(t *testing.T) {
+func TestBuildProducerConfig(t *testing.T) {
+	//Arrange
+	hasher := "murmur2"
 
-}
+	//Act
+	cfg := buildProducerConfig(hasher)
 
-func TestBuildProducerConfig_WithFNVHasher(t *testing.T) {
-
+	//Assert
+	assert.Equal(t, cfg.Version, sarama.V1_0_0_0)
+	assert.Equal(t, cfg.Producer.Return.Successes, false)
+	assert.Equal(t, cfg.Producer.Return.Errors, true)
+	assert.Equal(t, cfg.Producer.RequiredAcks, sarama.WaitForAll)
+	assert.Equal(t, cfg.Net.MaxOpenRequests, 1)
+	assert.Equal(t, cfg.Producer.Flush.Frequency, 100*time.Millisecond)
 }
