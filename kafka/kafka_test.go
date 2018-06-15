@@ -18,10 +18,6 @@ func TestNewProducer(t *testing.T) {
 }
 
 func TestBuildConsumerConfig(t *testing.T) {
-
-}
-
-func TestBuildProducerConfig_WithMurmurHasher(t *testing.T) {
 	//Act
 	cfg := buildConsumerConfig()
 
@@ -33,6 +29,10 @@ func TestBuildProducerConfig_WithMurmurHasher(t *testing.T) {
 	assert.Equal(t, cfg.Consumer.Fetch.Max, int32(1024*1024*2))
 	assert.Equal(t, cfg.Consumer.Fetch.Default, int32(1024*512))
 	assert.Equal(t, cfg.Consumer.Fetch.Min, int32(1024*10))
+}
+
+func TestBuildProducerConfig_WithMurmurHasher(t *testing.T) {
+
 }
 
 func TestBuildProducerConfig_WithFNVHasher(t *testing.T) {
