@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewConsumer(t *testing.T) {
@@ -43,7 +43,7 @@ func TestBuildProducerConfig(t *testing.T) {
 	assert.Equal(t, cfg.Version, sarama.V1_0_0_0)
 	assert.Equal(t, cfg.Producer.Return.Successes, false)
 	assert.Equal(t, cfg.Producer.Return.Errors, true)
-	assert.Equal(t, cfg.Producer.RequiredAcks, sarama.WaitForAll)
+	assert.Equal(t, cfg.Producer.RequiredAcks, sarama.WaitForLocal)
 	assert.Equal(t, cfg.Net.MaxOpenRequests, 1)
 	assert.Equal(t, cfg.Producer.Flush.Frequency, 100*time.Millisecond)
 }

@@ -62,7 +62,7 @@ func NewProducer(brokers []string, hasher string) sarama.AsyncProducer {
 
 func buildConsumerConfig() *cluster.Config {
 	cfg := cluster.NewConfig()
-	
+
 	cfg.Version = sarama.V1_0_0_0
 	cfg.Consumer.Offsets.Initial = sarama.OffsetOldest
 
@@ -85,7 +85,7 @@ func buildProducerConfig(hasher string) *sarama.Config {
 	cfg.Version = sarama.V1_0_0_0
 	cfg.Producer.Return.Successes = false
 	cfg.Producer.Return.Errors = true
-	cfg.Producer.RequiredAcks = sarama.WaitForAll
+	cfg.Producer.RequiredAcks = sarama.WaitForLocal
 
 	// Increasing this value will greatly increase the cloning speed.
 	// However, with MaxOpenRequests > 1, the order of the cloned messages is not guaranteed.
