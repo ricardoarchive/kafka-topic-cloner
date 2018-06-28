@@ -28,20 +28,30 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type parameters struct {
+	verbose     bool
+	loop        bool
+	fromBrokers string
+	toBrokers   string
+	fromTopic   string
+	toTopic     string
+	hasher      string
+	timeout     int
+}
+
 var (
-	verbose         bool
-	loop            bool
-	fromBrokers     string
-	toBrokers       string
-	from            string
-	to              string
-	hasher          string
-	timeout         int
+	params          parameters
 	consumerGroup   = "kafka-topic-cloner"
 	possibleHashers = []string{"murmur2", "FNV-1a"}
-)
 
-const appName = "kafka-topic-cloner"
+	errMissingSourceTopic    = errors.New("source topic must be set")
+	errMissingTargetTopic    = errors.New("target topic must be set")
+	errLoopCloningWithTarget = errors.New("do not specify target topic when loop-cloning")
+	errLoopRequired          = errors.New("cannot clone into the same topic without using --loop")
+	errMissingSourceBrokers  = errors.New("source brokers must be set")
+	errSourceBrokersIsTarget = errors.New("source and target brokers are identical")
+	errUnknownHasher         = errors.New("unknown hasher, see help for possible value")
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -59,7 +69,7 @@ var rootCmd = &cobra.Command{
 	Run: Clone,
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
+//Execute adds all child commands to the root command and sets flags appropriately.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
@@ -68,14 +78,15 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose mode")
-	rootCmd.PersistentFlags().BoolVarP(&loop, "loop", "L", false, "loop mode (clone into the source topic)")
-	rootCmd.PersistentFlags().StringVarP(&fromBrokers, "from-brokers", "F", "", "address of the source kafka brokers, semicolon-separated")
-	rootCmd.PersistentFlags().StringVarP(&toBrokers, "to-brokers", "T", "", "address of the target kafka brokers, semicolon-separated (specify only if different from the source brokers)")
-	rootCmd.PersistentFlags().StringVarP(&from, "from", "f", "", "source topic")
-	rootCmd.PersistentFlags().StringVarP(&to, "to", "t", "", "target topic")
-	rootCmd.PersistentFlags().StringVarP(&hasher, "hasher", "H", "murmur2", "partitioning hasher (possible values: murmur2, FNV-1a")
-	rootCmd.PersistentFlags().IntVarP(&timeout, "timeout", "o", 10000, "delay (ms) before exiting after the last message has been cloned")
+	//Load the cobra flags
+	rootCmd.PersistentFlags().BoolVarP(&params.verbose, "verbose", "v", false, "verbose mode")
+	rootCmd.PersistentFlags().BoolVarP(&params.loop, "loop", "L", false, "loop mode (clone into the source topic)")
+	rootCmd.PersistentFlags().StringVarP(&params.fromBrokers, "from-brokers", "F", "", "address of the source kafka brokers, semicolon-separated")
+	rootCmd.PersistentFlags().StringVarP(&params.toBrokers, "to-brokers", "T", "", "address of the target kafka brokers, semicolon-separated (specify only if different from the source brokers)")
+	rootCmd.PersistentFlags().StringVarP(&params.fromTopic, "from", "f", "", "source topic")
+	rootCmd.PersistentFlags().StringVarP(&params.toTopic, "to", "t", "", "target topic")
+	rootCmd.PersistentFlags().StringVarP(&params.hasher, "hasher", "H", "murmur2", "partitioning hasher (possible values: murmur2, FNV-1a")
+	rootCmd.PersistentFlags().IntVarP(&params.timeout, "timeout", "o", 10000, "delay (ms) before exiting after the last message has been cloned")
 
 	rootCmd.MarkPersistentFlagRequired("from-brokers")
 	rootCmd.MarkPersistentFlagRequired("from")
@@ -84,24 +95,21 @@ func init() {
 //Clone handles the consuming / producing process
 func Clone(cmd *cobra.Command, args []string) {
 
-	if err := validateParameters(); err != nil {
+	if err := params.validate(); err != nil {
 		log.Print(err)
 		return
 	}
 
-	b := strings.Split(fromBrokers, ";")
+	fromBrokers, toBrokers := getBrokers()
 
-	consumer := kafka.NewConsumer(from, b, consumerGroup)
-	if verbose {
-		log.Printf("consumer (group: %s) initialized on %s/%s", consumerGroup, b, from)
+	consumer := kafka.NewConsumer(params.fromTopic, fromBrokers, consumerGroup)
+	if params.verbose {
+		log.Printf("consumer (group: %s) initialized on %s/%s", consumerGroup, fromBrokers, params.fromTopic)
 	}
 
-	if toBrokers != "" {
-		b = strings.Split(toBrokers, ";")
-	}
-	producer := kafka.NewProducer(b, hasher)
-	if verbose {
-		log.Printf("producer initialized on %s/%s, hasher: %s", b, to, hasher)
+	producer := kafka.NewProducer(toBrokers, params.hasher)
+	if params.verbose {
+		log.Printf("producer initialized on %s/%s, hasher: %s", toBrokers, params.toTopic, params.hasher)
 	}
 
 	//Try to gracefully shutdown
@@ -124,12 +132,12 @@ Loop:
 		select {
 
 		case msgC, ok := <-consumer.Messages():
-			if verbose {
+			if params.verbose {
 				log.Print(fmt.Sprintf("message consumed at partition %v, offset %v", msgC.Partition, msgC.Offset))
 			}
 			if ok {
 				msgP := &sarama.ProducerMessage{
-					Topic: to,
+					Topic: params.toTopic,
 				}
 				if msgC.Value != nil {
 					msgP.Value = sarama.ByteEncoder(msgC.Value)
@@ -138,7 +146,7 @@ Loop:
 					msgP.Key = sarama.ByteEncoder(msgC.Key)
 				}
 				producer.Input() <- msgP
-				if verbose {
+				if params.verbose {
 					log.Print("message produced")
 				}
 			}
@@ -147,39 +155,50 @@ Loop:
 			log.Print("terminating application")
 			break Loop
 
-		case <-time.After(time.Duration(timeout) * time.Millisecond):
+		case <-time.After(time.Duration(params.timeout) * time.Millisecond):
 			log.Print("timeout - end of cloning")
 			break Loop
 		}
 	}
 }
 
-func validateParameters() error {
+func (p parameters) validate() error {
 	switch true {
 
-	case from == "":
-		return errors.New("source topic must be set")
+	case p.fromTopic == "":
+		return errMissingSourceTopic
 
-	case to == "" && !loop:
-		return errors.New("target topic must be set")
+	case p.toTopic == "" && !p.loop:
+		return errMissingTargetTopic
 
-	case to != "" && loop:
-		return errors.New("do not specify target topic when loop-cloning")
+	case p.toTopic != "" && p.loop:
+		return errLoopCloningWithTarget
 
-	case from == to && !loop && toBrokers == "":
-		return errors.New("cannot clone into the same topic without using --loop")
+	case p.fromTopic == p.toTopic && !p.loop && p.toBrokers == "":
+		return errLoopRequired
 
-	case fromBrokers == "":
-		return errors.New("source brokers must be set")
+	case p.fromBrokers == "":
+		return errMissingSourceBrokers
 
-	case fromBrokers == toBrokers:
-		return errors.New("source and target brokers are the same")
+	case p.fromBrokers == p.toBrokers:
+		return errSourceBrokersIsTarget
 
-	case !contains(possibleHashers, hasher):
-		return errors.New("unknown hasher, see help for possible values")
+	case !contains(possibleHashers, p.hasher):
+		return errUnknownHasher
 
 	}
 	return nil
+}
+
+func getBrokers() (from, to []string) {
+	from = strings.Split(params.fromBrokers, ";")
+
+	if params.toBrokers != "" {
+		to = strings.Split(params.toBrokers, ";")
+	} else {
+		to = from
+	}
+	return
 }
 
 func contains(s []string, e string) bool {
