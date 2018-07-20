@@ -4,8 +4,8 @@
 [[projects]]
   name = "github.com/Shopify/sarama"
   packages = ["."]
-  revision = "f7be6aa2bc7b2e38edf816b08b582782194a1c02"
-  version = "v1.16.0"
+  revision = "35324cf48e33d8260e1c7c18854465a904ade249"
+  version = "v1.17.0"
 
 [[projects]]
   name = "github.com/bsm/sarama-cluster"
@@ -29,7 +29,7 @@
   branch = "master"
   name = "github.com/eapache/go-xerial-snappy"
   packages = ["."]
-  revision = "bb955e01b9346ac19dc29eb16586c90ded99a98c"
+  revision = "040cc1a32f578808623071247fdbd5cc43f37f5f"
 
 [[projects]]
   name = "github.com/eapache/queue"
@@ -50,16 +50,19 @@
   version = "v1.0"
 
 [[projects]]
-  name = "github.com/pierrec/lz4"
-  packages = ["."]
-  revision = "2fcda4cb7018ce05a25959d2fe08c83e3329f169"
-  version = "v1.1"
+  name = "github.com/magiconair/properties"
+  packages = ["assert"]
+  revision = "c2353362d570a7bfa228149c62842019201cfb71"
+  version = "v1.8.0"
 
 [[projects]]
-  name = "github.com/pierrec/xxHash"
-  packages = ["xxHash32"]
-  revision = "f051bb7f1d1aaf1b5a665d74fb6b0217712c69f7"
-  version = "v0.1.1"
+  name = "github.com/pierrec/lz4"
+  packages = [
+    ".",
+    "internal/xxh32"
+  ]
+  revision = "1958fd8fff7f115e79725b1288e0b878b3e06b00"
+  version = "v2.0.3"
 
 [[projects]]
   branch = "master"
@@ -82,6 +85,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0681b71b5b765541b86b1a89ce787478541ea714dc0df81b365d0f0f7680435f"
+  inputs-digest = "64150ea4a077a8198b16343286025229b068cd03d3f60a1a603a2c9e11680a0f"
   solver-name = "gps-cdcl"
   solver-version = 1
