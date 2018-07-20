@@ -52,6 +52,9 @@ func NewProducer(brokers []string, hasher string) sarama.AsyncProducer {
 	cfg.Producer.Return.Errors = true
 	cfg.Producer.RequiredAcks = sarama.WaitForAll
 
+	// Since producer messages size limits are best-effort only, we set the sarama absolute hard limit ti 1M
+	sarama.MaxRequestSize = 1024 * 1024
+
 	// Increasing this value will greatly increase the cloning speed.
 	// However, with MaxOpenRequests > 1, the order of the cloned messages is not guaranteed.
 	cfg.Net.MaxOpenRequests = 1
