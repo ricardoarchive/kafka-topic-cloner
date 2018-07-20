@@ -96,7 +96,7 @@ from            | f         | Source topic's name
 to-brokers      | T         | Semicolon-separated list of the target kafka brokers, specify only for cross-clusters cloning
 to              | t         | Destination topic's name
 timeout         | o         | consumer timeout is ms (defaults to 10000)
-hasher          | H         | name of the hasher to use for partitioning, possible values: murmur2 (default), FNV-1a
+hasher          | p         | name of the hasher to use for partitioning, possible values: murmur2 (default), FNV-1a
 compression     | c         | name of the compression codec to use, possible values: none, gzip(default), snappy, lz4
 loop            | L         | allow loop-cloning
 verbose         | v         | verbose mode (defaults to false)

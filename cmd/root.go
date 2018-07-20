@@ -88,7 +88,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&params.toBrokers, "to-brokers", "T", "", "address of the target kafka brokers, semicolon-separated (specify only if different from the source brokers)")
 	rootCmd.PersistentFlags().StringVarP(&params.fromTopic, "from", "f", "", "source topic")
 	rootCmd.PersistentFlags().StringVarP(&params.toTopic, "to", "t", "", "target topic")
-	rootCmd.PersistentFlags().StringVarP(&params.hasher, "hasher", "H", "murmur2", "partitioning hasher (possible values: murmur2, FNV-1a")
+	rootCmd.PersistentFlags().StringVarP(&params.hasher, "hasher", "p", "murmur2", "partitioning hasher (possible values: murmur2, FNV-1a")
 	rootCmd.PersistentFlags().StringVarP(&params.compressionType, "compression", "c", "gzip", "producer's compression policy (possible values: none, gzip, FNV-1a")
 	rootCmd.PersistentFlags().IntVarP(&params.timeout, "timeout", "o", 10000, "delay (ms) before exiting after the last message has been cloned")
 
