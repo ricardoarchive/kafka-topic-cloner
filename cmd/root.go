@@ -29,28 +29,31 @@ import (
 )
 
 type parameters struct {
-	verbose     bool
-	loop        bool
-	fromBrokers string
-	toBrokers   string
-	fromTopic   string
-	toTopic     string
-	hasher      string
-	timeout     int
+	verbose         bool
+	loop            bool
+	fromBrokers     string
+	toBrokers       string
+	fromTopic       string
+	toTopic         string
+	hasher          string
+	compressionType string
+	timeout         int
 }
 
 var (
-	params          parameters
-	consumerGroup   = "kafka-topic-cloner"
-	possibleHashers = []string{"murmur2", "FNV-1a"}
+	params                   parameters
+	consumerGroup            = "kafka-topic-cloner"
+	possibleHashers          = []string{"murmur2", "FNV-1a"}
+	possibleCompressionTypes = []string{"none", "gzip", "snappy", "lz4"}
 
-	errMissingSourceTopic    = errors.New("source topic must be set")
-	errMissingTargetTopic    = errors.New("target topic must be set")
-	errLoopCloningWithTarget = errors.New("do not specify target topic when loop-cloning")
-	errLoopRequired          = errors.New("cannot clone into the same topic without using --loop")
-	errMissingSourceBrokers  = errors.New("source brokers must be set")
-	errSourceBrokersIsTarget = errors.New("source and target brokers are identical")
-	errUnknownHasher         = errors.New("unknown hasher, see help for possible value")
+	errMissingSourceTopic     = errors.New("source topic must be set")
+	errMissingTargetTopic     = errors.New("target topic must be set")
+	errLoopCloningWithTarget  = errors.New("do not specify target topic when loop-cloning")
+	errLoopRequired           = errors.New("cannot clone into the same topic without using --loop")
+	errMissingSourceBrokers   = errors.New("source brokers must be set")
+	errSourceBrokersIsTarget  = errors.New("source and target brokers are identical")
+	errUnknownHasher          = errors.New("unknown hasher, see help for possible value")
+	errUnknownCompressionType = errors.New("unknown compression type, see help for possible value")
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -86,6 +89,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&params.fromTopic, "from", "f", "", "source topic")
 	rootCmd.PersistentFlags().StringVarP(&params.toTopic, "to", "t", "", "target topic")
 	rootCmd.PersistentFlags().StringVarP(&params.hasher, "hasher", "H", "murmur2", "partitioning hasher (possible values: murmur2, FNV-1a")
+	rootCmd.PersistentFlags().StringVarP(&params.compressionType, "compression", "c", "gzip", "producer's compression policy (possible values: none, gzip, FNV-1a")
 	rootCmd.PersistentFlags().IntVarP(&params.timeout, "timeout", "o", 10000, "delay (ms) before exiting after the last message has been cloned")
 
 	rootCmd.MarkPersistentFlagRequired("from-brokers")
@@ -107,7 +111,7 @@ func Clone(cmd *cobra.Command, args []string) {
 		log.Printf("consumer (group: %s) initialized on %s/%s", consumerGroup, fromBrokers, params.fromTopic)
 	}
 
-	producer := kafka.NewProducer(toBrokers, params.hasher)
+	producer := kafka.NewProducer(toBrokers, params.hasher, params.compressionType)
 	if params.verbose {
 		log.Printf("producer initialized on %s/%s, hasher: %s", toBrokers, params.toTopic, params.hasher)
 	}
@@ -185,6 +189,9 @@ func (p parameters) validate() error {
 
 	case !contains(possibleHashers, p.hasher):
 		return errUnknownHasher
+
+	case !contains(possibleCompressionTypes, p.compressionType):
+		return errUnknownCompressionType
 
 	}
 	return nil

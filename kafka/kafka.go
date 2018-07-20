@@ -34,9 +34,9 @@ func NewConsumer(from string, brokers []string, consumerGroup string) *cluster.C
 }
 
 //NewProducer configures and returns an async producer
-func NewProducer(brokers []string, hasher string) sarama.AsyncProducer {
+func NewProducer(brokers []string, hasher, compressionType string) sarama.AsyncProducer {
 
-	cfg := buildProducerConfig(hasher)
+	cfg := buildProducerConfig(hasher, compressionType)
 
 	producer, err := sarama.NewAsyncProducer(brokers, cfg)
 	if err != nil {
@@ -77,7 +77,7 @@ func buildConsumerConfig() *cluster.Config {
 	return cfg
 }
 
-func buildProducerConfig(hasher string) *sarama.Config {
+func buildProducerConfig(hasher, compressionType string) *sarama.Config {
 
 	cfg := sarama.NewConfig()
 
@@ -96,6 +96,17 @@ func buildProducerConfig(hasher string) *sarama.Config {
 
 	// Without this, cloning a high-volume topic will fail
 	cfg.Producer.Flush.Frequency = 100 * time.Millisecond
+
+	switch compressionType {
+	case "none":
+		cfg.Producer.Compression = sarama.CompressionNone
+	case "gzip":
+		cfg.Producer.Compression = sarama.CompressionGZIP
+	case "snappy":
+		cfg.Producer.Compression = sarama.CompressionSnappy
+	case "lz4":
+		cfg.Producer.Compression = sarama.CompressionLZ4
+	}
 
 	if hasher == "murmur2" {
 		cfg.Producer.Partitioner = sarama.NewCustomHashPartitioner(MurmurHasher)

@@ -1,9 +1,7 @@
 # Kafka topic cloner
 `Kafka topic cloner` is a CLI that clones the content of a topic into another one.
 
-The two topics have to coexist inside the same Kafka cluster. If that's not the case, you probably want to have a look at [Apache Mirrormaker](https://docs.confluent.io/current/multi-dc/mirrormaker.html).
-
-The cloner supports two different hashers for partition assignment:
+The cloner supports two different hashers for key/partition assignment:
 * `Murmur2`, which is the standard hasher used in the Java kafka community, including kafka scripts and kafka connect (default)
 * `FNV-1a`, which is the standard hasher used in a part of the Go kafka community (_e.g. Sarama producers_)
 
@@ -99,6 +97,7 @@ to-brokers      | T         | Semicolon-separated list of the target kafka broke
 to              | t         | Destination topic's name
 timeout         | o         | consumer timeout is ms (defaults to 10000)
 hasher          | H         | name of the hasher to use for partitioning, possible values: murmur2 (default), FNV-1a
+compression     | c         | name of the compression codec to use, possible values: none, gzip(default), snappy, lz4
 loop            | L         | allow loop-cloning
 verbose         | v         | verbose mode (defaults to false)
 help            | h         | displays the CLI's help

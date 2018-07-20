@@ -35,9 +35,10 @@ func TestBuildConsumerConfig(t *testing.T) {
 func TestBuildProducerConfig(t *testing.T) {
 	//Arrange
 	hasher := "murmur2"
+	compressionType := "gzip"
 
 	//Act
-	cfg := buildProducerConfig(hasher)
+	cfg := buildProducerConfig(hasher, compressionType)
 
 	//Assert
 	assert.Equal(t, cfg.Version, sarama.V1_0_0_0)
