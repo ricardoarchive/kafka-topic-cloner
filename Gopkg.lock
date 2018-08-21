@@ -2,10 +2,11 @@
 
 
 [[projects]]
+  branch = "master"
   name = "github.com/Shopify/sarama"
   packages = ["."]
-  revision = "35324cf48e33d8260e1c7c18854465a904ade249"
-  version = "v1.17.0"
+  revision = "e7238b119b7daab993720f0153eafb88e2b0ac1f"
+  source = "http://github.com/Shopify/sarama"
 
 [[projects]]
   name = "github.com/bsm/sarama-cluster"
@@ -65,6 +66,12 @@
   version = "v2.0.3"
 
 [[projects]]
+  name = "github.com/pmezard/go-difflib"
+  packages = ["difflib"]
+  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
+  version = "v1.0.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/rcrowley/go-metrics"
   packages = ["."]
@@ -82,9 +89,15 @@
   revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
   version = "v1.0.1"
 
+[[projects]]
+  name = "github.com/stretchr/testify"
+  packages = ["assert"]
+  revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
+  version = "v1.2.2"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "64150ea4a077a8198b16343286025229b068cd03d3f60a1a603a2c9e11680a0f"
+  inputs-digest = "9614e3a5b6193e1ab87501eae1a0d93948dc681bc150afcc592d88ca6b34d0e0"
   solver-name = "gps-cdcl"
   solver-version = 1
