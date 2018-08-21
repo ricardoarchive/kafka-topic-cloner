@@ -1,7 +1,8 @@
-[[constraint]]
+[[override]]
   name = "github.com/Shopify/sarama"
-  version = "1.16.0"
-
+  source = "http://github.com/Shopify/sarama"
+  branch = "master"
+  
 [[constraint]]
   name = "github.com/bsm/sarama-cluster"
   version = "2.1.13"
